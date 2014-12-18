@@ -72,7 +72,7 @@ optional arguments:
   --pods PATH           local Pods folder path (default is parent dir)
   --podfile PODFILE     Podfile path (default is ./Podfile)
   -d --dry-run          perform a trial run with no changes made
-  -o --preserve-originals
+  -o --preserve-original
                         preserve original lines with comments
 ```
 
