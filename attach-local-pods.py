@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Injects local copies of CocoaPods in Podfile
-# Version 1.0
+# Version 1.1
 # Homepage: https://github.com/anodamobi/Local-CocoaPods-auto-attacher
 # Author: Alex Zavrazhniy <alex@anoda.mobi>
 # Copyright 2014, ANODA Mobile Development Agency
@@ -14,11 +14,12 @@ import logging
 import re
 
 parser = argparse.ArgumentParser(description='Injects local copies of CocoaPods in Podfile')
-parser.add_argument('--version', action='version', version='%(prog)s version 1.0')
+parser.add_argument('--version', action='version', version='%(prog)s version 1.1')
 parser.add_argument('-v', dest='verbose', action='store_true', help='verbose output')
 parser.add_argument('--pods', dest='path', default='..', type=str, help='local Pods folder path (default is parent dir)')
 parser.add_argument('--podfile', dest='podfile', default='Podfile', type=str, help='Podfile path (default is ./Podfile)')
 parser.add_argument('-d --dry-run', dest='dry', action='store_true', help='perform a trial run with no changes made')
+parser.add_argument('-o --preserve-original', dest='preserve', action='store_true', help='preserve original lines with comments')
 
 args = parser.parse_args()
 
@@ -69,7 +70,10 @@ for line in podfile.readlines():
                 podPath = args.path + pod
                 if os.path.isdir(podPath):
                     print 'Found local Pod %s at: %s\n' % (pod, podPath)
-                    line += ', :path => \'%s\'' % podPath
+                    if args.preserve:
+                        line = '#' + line + '\n' + line + ', :path => \'%s\'' % podPath
+                    else:
+                        line += ', :path => \'%s\'' % podPath
 
     podfileNew += '%s\n' % line
 

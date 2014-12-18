@@ -61,16 +61,19 @@ Usage
 ```
 usage: attach-local-pods.py [-h] [--version] [-v] [--pods PATH]
                             [--podfile PODFILE] [-d --dry-run]
+                            [-o --preserve-originals]
 
 Injects local copies of CocoaPods in Podfile
 
 optional arguments:
-  -h, --help         show this help message and exit
-  --version          show program's version number and exit
-  -v                 verbose output
-  --pods PATH        local Pods folder path (default is parent dir)
-  --podfile PODFILE  Podfile path (default is ./Podfile)
-  -d --dry-run       perform a trial run with no changes made
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  -v                    verbose output
+  --pods PATH           local Pods folder path (default is parent dir)
+  --podfile PODFILE     Podfile path (default is ./Podfile)
+  -d --dry-run          perform a trial run with no changes made
+  -o --preserve-originals
+                        preserve original lines with comments
 ```
 
 ### Example call
