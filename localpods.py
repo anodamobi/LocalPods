@@ -53,26 +53,27 @@ if args.generateConfig:
 # / config generator
 
 
-# Enable verbose or dry run if needed
+# Enable verbose if needed
 if args.verbose:
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 else:
     logging.basicConfig(format='%(levelname)s: %(message)s')
 
-if args.dry:
-    print 'Performing a trial run with no changes made\n'
+
+# default options
+options = {
+    'pods': '..',
+    'podfile': 'Podfile',
+    'preserve': False,
+    'group': False,
+    'runupdate': False,
+    'dry': False
+}
+
 
 # read config file
 config = ConfigParser.ConfigParser()
 config.read(args.config)
-
-options = {
-    'pods': '..',
-    'podfile': 'Podfile',
-    'preserve': parser.get_default('preserve'),
-    'group': parser.get_default('group'),
-    'runupdate': parser.get_default('runupdate')
-}
 
 if config.has_option('localpods', 'pods'):
     options['pods'] = config.get('localpods', 'pods')
@@ -88,29 +89,56 @@ if config.has_option('localpods', 'runupdate'):
 # / read config file
 
 
+# override CLI options
+if args.pods:
+    options['pods'] = args.pods
+
+if args.podfile:
+    options['podfile'] = args.podfile
+
+if args.group:
+    options['group'] = True
+
+if args.preserve:
+    options['preserve'] = True
+
+if args.runupdate:
+    options['runupdate'] = True
+
+if args.dry:
+    options['dry'] = True
+# / override CLI options
+
+
+if options['dry']:
+    print 'Performing a trial run with no changes made\n'
+
+
 # expand ~ in pods path and make it absolute
-if args.pods[0] == '~':
-    args.pods = os.path.expanduser(args.pods)
-args.pods = os.path.abspath(args.pods) + '/'
+if options['pods'][0] == '~':
+    options['pods'] = os.path.expanduser(options['pods'])
+
+options['pods'] = os.path.abspath(options['pods']) + '/'
 
 # expand ~ in podfile path and make it absolute
-if args.podfile[0] == '~':
-    args.podfile= os.path.expanduser(args.podfile)
-args.podfile = os.path.abspath(args.podfile)
+if options['podfile'][0] == '~':
+    options['podfile'] = os.path.expanduser(options['podfile'])
+
+options['podfile'] = os.path.abspath(options['podfile'])
 
 
-logging.debug('Using Local Pods folder: %s', args.pods)
-logging.debug('Using Podfile: %s\n', args.podfile)
+logging.debug('Using Local Pods folder: %s', options['pods'])
+logging.debug('Using Podfile: %s\n', options['podfile'])
 
 
-if not os.path.isfile(args.podfile):
-    logging.error('Podfile not found at %s', args.podfile)
+if not os.path.isfile(options['podfile']):
+    logging.error('Podfile not found at %s', options['podfile'])
     exit(1)
 
 try:
-    podfile = open(args.podfile)
+    podfileOld = open(options['podfile'])
 except:
-    logging.error('Unable to open Podfile at %s', args.podfile)
+    logging.error('Unable to open Podfile at %s', options['podfile'])
     exit(1)
 
 
@@ -118,38 +146,38 @@ podfileNew = ''
 podfileNewGroupOld = ''
 podfileNewGroupNew = ''
 
-for line in podfile.readlines():
-    line = line.strip()
-    if line[0:3] == 'pod':
-        logging.debug('Found %s', line)
+for lineOld in podfileOld.readlines():
+    lineOld = lineOld.strip()
+    if lineOld[0:3] == 'pod':
+        logging.debug('Found %s', lineOld)
         try:
-            pod = re.compile('pod\s([\'"]([A-z0-9+-_]*)[\'"])').match(line).group(2)
-            logging.debug('Pod name: %s\n', pod)
+            podName = re.compile('pod\s([\'"]([A-z0-9+-_]*)[\'"])').match(lineOld).group(2)
+            logging.debug('Pod name: %s\n', podName)
         except:
-            logging.warning('Unable to parse Pod name, is it fits the [A-z0-9+-_] pattern?\n')
+            logging.warning('Unable to parse Pod name, does it fit the [A-z0-9+-_] pattern?\n')
 
-        if pod:
-            isLocal = re.compile(':path => [\'"](.*)[\'"]').search(line)
-            if isLocal:
-                localPath = isLocal.group(1)
-                logging.warning('Pod %s already pointed at local path: %s\n', pod, localPath)
+        if podName:
+            isAlreadyLocal = re.compile(':path => [\'"](.*)[\'"]').search(lineOld)
+            if isAlreadyLocal:
+                localPath = isAlreadyLocal.group(1)
+                logging.warning('Pod %s already pointed at local path: %s\n', podName, localPath)
                 if not os.path.isdir(localPath):
-                    logging.warning('Local path %s for Pod %s does not exists!', localPath, pod)
+                    logging.warning('Local path %s for Pod %s does not exists!', localPath, podName)
             else:
-                podPath = args.pods + pod
+                podPath = options['pods'] + podName
                 if os.path.isdir(podPath):
-                    print 'Found local Pod %s at: %s\n' % (pod, podPath)
-                    if args.group:
-                        line
+                    print 'Found local Pod %s at: %s\n' % (podName, podPath)
+                    if options['group']:
+                        lineOld
                     else:
-                        lineNew = "pod '%s', :path => '%s'" % (pod, podPath)
-                        if args.preserve:
-                            lineNew = "#%s\n%s" % (line, lineNew)
-                        line = lineNew
+                        lineNew = "pod '%s', :path => '%s'" % (podName, podPath)
+                        if options['preserve']:
+                            lineNew = "#%s\n%s" % (lineOld, lineNew)
+                        lineOld = lineNew
 
-    podfileNew += '%s\n' % line
+    podfileNew += '%s\n' % lineOld
 
-podfile.close()
+podfileOld.close()
 
 # Append bottom part of new podfile
 if len(podfileNewGroupOld) > 0:
@@ -159,14 +187,14 @@ if len(podfileNewGroupOld) > 0:
     podfileNew += podfileNewGroupNew
 
 
-if args.dry:
+if options['dry']:
     print 'The new Podfile:'
     print podfileNew
 else:
-    podfile = open(args.podfile, 'wb')
-    podfile.write(podfileNew)
-    print 'Saved new Podfile to: %s' % args.podfile
-    if args.runupdate:
+    podfileOld = open(options['podfile'], 'wb')
+    podfileOld.write(podfileNew)
+    print 'Saved new Podfile to: %s' % options['podfile']
+    if options['runupdate']:
         print 'Running `pod update`'
         os.system('pod update')
 
