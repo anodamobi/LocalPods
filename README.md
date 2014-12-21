@@ -1,9 +1,9 @@
-Local-CocoaPods-auto-attacher
-=============================
+LocalPods
+=========
 
 Automagically attach via :path locally hosted CocoaPods repos from Podfile.
 
-Sometimes you need to create new private CocoaPod for your project, but it's very complicated to debug and improve it while it automatically attached via `pod update` command because there is not a git repo in the __Pods__ folder. It's okay in production — you don't need to download whole repos of your pods each time you setup new projects, but when you developing new Pods — it's a required time-saving feature.
+Sometimes you need to create new private CocoaPod for your project, but it's very complicated to debug and improve it while it automatically attached via `pod update` command from remote repo because there is not a git repo in the __Pods__ folder. It's okay in production — you don't need to download whole repos of your pods each time you setup new projects, but when you developing new Pods — it's a required time-saving feature.
 
 Solution
 --------
@@ -18,7 +18,7 @@ But when you have 10 or more private Pods it's going to be very painful to manag
 
 We have created a smart script that will do all the magic for you.
 
-Just call the `attach-local-pods.py` script in the project folder and it will scan your __Podfile__ for a pods that installed locally and add `:path` parameter to them.
+Just call the `localpods.py` script in the project folder and it will scan your __Podfile__ for a pods that installed locally and add `:path` parameter to them.
 
 By default script looks for a private Pods folders in the parent directory of current working directory.
 
@@ -39,7 +39,7 @@ pod 'PrivatePod1'
 pod 'PrivatePod2'
 ```
 
-After you will run the `attach-local-pods.py` script, your __Podfile__ will looks like:
+After you will run the `localpods.py` script, your __Podfile__ will looks like:
 
 ```
 pod 'PrivatePod1', :path => '/Holy Folder/PrivatePod1'
@@ -52,16 +52,16 @@ Exceptions
 ----------
 
 * Script will skip pods with existing `:path` parameter. We plan to add some interactive solution soon.
-* Script will check specified folder in `:path` parameter for existing.
+* Script will check specified folder in `:path` parameter for existing and warn you if provided folder does not exists.
 * Script will work with any additional __Podfile__ parameters such as pod's version, custom git URL and any other.
+* Script can backup your __Podfile__ before changing (optionally with `-b` or `--backup` parameter).
 
 Usage
 -----
 
 ```
-usage: attach-local-pods.py [-h] [--version] [-v] [--pods PATH]
-                            [--podfile PODFILE] [-d --dry-run]
-                            [-o --preserve-originals]
+usage: localpods.py [-h] [--version] [-v] [--pods PODS] [--podfile PODFILE]
+                    [-d] [-b] [-o] [-g] [-r] [-c CONFIG] [--generate-config]
 
 Injects local copies of CocoaPods in Podfile
 
@@ -69,17 +69,23 @@ optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
   -v                    verbose output
-  --pods PATH           local Pods folder path (default is parent dir)
+  --pods PODS           local Pods folder path (default is parent dir)
   --podfile PODFILE     Podfile path (default is ./Podfile)
-  -d --dry-run          perform a trial run with no changes made
-  -o --preserve-original
+  -d, --dry-run         perform a trial run with no changes made
+  -b, --backup          backup Podfile before update
+  -o, --preserve-original
                         preserve original lines with comments
+  -g, --group           group local pods
+  -r, --runupdate       run `pod update` after saving
+  -c CONFIG, --config CONFIG
+                        config file (default is ~/.localpods)
+  --generate-config     generate config file interactively and exit
 ```
 
 ### Example call
 
 ```
-attach-local-pods.py -d -v
+localpods.py -d -v
 ```
 
 With this parameters (`-v` and `-d`) script will dry run produce more detailed output. So your __Podfile__ will be untouched, you will see new __Podfile__ in stdout.
@@ -178,19 +184,49 @@ end
 
 ### Use cases
 
-Update __Podfile__ in current folder, look for a Pods in the parent folder:
+__Localpods__ is very flexible script that will turn your __Pods__ development from hell to heaven ^_^
+
+#### Daily usage
+
+Update __Podfile__ in current folder, look for a Pods in the parent folder (or custom folder from config file) and run `pod update` after completition:
 
 ```
-./attach-local-pods.py
+./localpods.py -r
 ```
+
+#### Changes preview
+
+Don't want to apply changes immediately? It's okay, everybodylies.jpg :D
+
+```
+./localpods.py -d
+```
+This will perform dry run and output new __Podfile__ to the stdout instead of file.
+
+#### Custom paths
 
 Update __Podfile__ in folder `/Users/alex/Development/Projects/Trainings/Demo`, look for a Pods in the `/Users/alex/Development/Pods` folder:
 
 ```
-./attach-local-pods.py \
+./localpods.py \
     --pods /Users/alex/Development/Pods \
     --podfile /Users/alex/Development/Projects/Trainings/Demo
 ```
+
+#### Customisation and configuration
+
+It's logical to assume that you will store all your local pods in one separate folder and you don't want to enter pods folder path each time you using the script. So you can simply run `./localpods.py --generate-config` and the answer few questions. This will generate your personal config file for __localpods__ and store it in `~/.localpods` file. You can also create this file manually. Here is an example of config file:
+
+```
+[localpods]
+pods = ~/Documents/Work/Pods
+group = False
+preserve = True
+runupdate = True
+backup = True
+```
+
+Each time you will run the script it will use options from config file. All options can be overrided from command line. For example, you have option `pods = ~/LocalPods` in your config file, but right now you want to use custom folder: `./localpods.py --pods ~/CustomLocalPods`.
 
 Contribution
 ------------
